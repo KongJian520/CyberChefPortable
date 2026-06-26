@@ -71,10 +71,15 @@ jobs:
       - name: 安装 Rust 工具链
         uses: dtolnay/rust-toolchain@stable
 
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
       - name: 安装 Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: 'npm'
 
       - name: 安装 Linux 系统依赖
         if: matrix.os == 'ubuntu-latest'
@@ -90,7 +95,16 @@ jobs:
       - name: 安装 npm 依赖
         run: npm install
 
+      - uses: actions/cache@v4
+        id: cyberchef-cache
+        with:
+          path: |
+            cyberchef-dist
+            .cyberchef-version
+          key: cyberchef-${{ needs.check.outputs.version }}
+
       - name: 下载 CyberChef
+        if: steps.cyberchef-cache.outputs.cache-hit != 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/download-cyberchef.js
