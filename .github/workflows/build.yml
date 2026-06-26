@@ -94,6 +94,7 @@ jobs:
         run: node scripts/download-cyberchef.js
 
       - name: 注入版本号
+        shell: bash
         run: |
           VER="${{ needs.check.outputs.version }}"
           node -e "
