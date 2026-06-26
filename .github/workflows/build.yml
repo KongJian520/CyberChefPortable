@@ -133,6 +133,8 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
@@ -145,6 +147,13 @@ jobs:
             cp "$f" "dist/$(basename "$f")"
           done
           ls -lh dist/
+
+      - name: 创建 Git Tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -f ${{ needs.check.outputs.version }}
+          git push -f origin ${{ needs.check.outputs.version }}
 
       - name: 创建 Release
         uses: softprops/action-gh-release@v2
