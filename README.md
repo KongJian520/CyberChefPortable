@@ -14,7 +14,12 @@
 | Linux | `.AppImage` / `.deb` |
 | Windows | `.msi` |
 
-> macOS 首次打开如遇「无法验证开发者」提示，请在系统设置 → 隐私与安全性中允许运行。
+> **macOS 用户**: 应用未经过 Apple 官方签名，首次打开时会提示「已损坏」或「无法验证开发者」。
+> 
+> **解决方法（任选其一）**：
+> - 右键点击 `CyberChef.app` → 按住 Option 键 → 打开 → 确认
+> - 终端执行：`xattr -cr /Applications/CyberChef.app` 移除隔离属性
+> - 系统设置 → 隐私与安全性 → 仍要打开
 
 ## 开发
 
