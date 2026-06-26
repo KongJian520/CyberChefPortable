@@ -91,6 +91,8 @@ jobs:
         run: npm install
 
       - name: 下载 CyberChef
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/download-cyberchef.js
 
       - name: 注入版本号

@@ -63,30 +63,54 @@ async function withRetry(fn, label, maxRetries) {
   throw lastError;
 }
 
+function buildHeaders() {
+  const headers = {
+    'User-Agent': 'CyberChefPortable/1.0',
+    'Accept': 'application/vnd.github+json',
+  };
+  const token = process.env.GITHUB_TOKEN;
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
 function httpGetJson(url) {
   return new Promise((resolve, reject) => {
-    https.get(url, {
-      headers: {
-        'User-Agent': 'CyberChefPortable/1.0',
-        'Accept': 'application/vnd.github+json',
-      }
-    }, (res) => {
+    https.get(url, { headers: buildHeaders() }, (res) => {
       if (res.statusCode === 302 || res.statusCode === 301) {
-        https.get(res.headers.location, {
-          headers: {
-            'User-Agent': 'CyberChefPortable/1.0',
-            'Accept': 'application/vnd.github+json',
-          }
-        }, (res2) => {
+        https.get(res.headers.location, { headers: buildHeaders() }, (res2) => {
           let data = '';
           res2.on('data', chunk => data += chunk);
-          res2.on('end', () => resolve(JSON.parse(data)));
+          res2.on('end', () => {
+            try {
+              const json = JSON.parse(data);
+              if (res2.statusCode < 200 || res2.statusCode >= 300) {
+                reject(new Error(`HTTP ${res2.statusCode}: ${json.message || '(未知错误)'}`));
+                return;
+              }
+              resolve(json);
+            } catch (e) {
+              reject(new Error(`JSON 解析失败: ${e.message}`));
+            }
+          });
         }).on('error', reject);
         return;
       }
       let data = '';
       res.on('data', chunk => data += chunk);
-      res.on('end', () => resolve(JSON.parse(data)));
+      res.on('end', () => {
+        try {
+          const json = JSON.parse(data);
+          if (res.statusCode < 200 || res.statusCode >= 300) {
+            reject(new Error(`HTTP ${res.statusCode}: ${json.message || '(未知错误)'}`));
+            return;
+          }
+          resolve(json);
+        } catch (e) {
+          reject(new Error(`JSON 解析失败: ${e.message}`));
+        }
+      });
     }).on('error', reject);
   });
 }
@@ -106,6 +130,16 @@ function downloadFile(url, dest) {
     };
 
     https.get(options, (res) => {
+      if (res.statusCode < 200 || res.statusCode >= 400) {
+        let body = '';
+        res.on('data', c => body += c);
+        res.on('end', () => {
+          file.close();
+          fs.unlinkSync(dest);
+          reject(new Error(`HTTP ${res.statusCode}: 下载失败`));
+        });
+        return;
+      }
       if (res.statusCode === 302 || res.statusCode === 301) {
         file.close();
         fs.unlinkSync(dest);
