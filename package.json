@@ -2,7 +2,6 @@
   "name": "cyberchefportable",
   "private": true,
   "version": "0.1.0",
-  "type": "module",
   "scripts": {
     "download-cyberchef": "node scripts/download-cyberchef.js",
     "tauri": "tauri"

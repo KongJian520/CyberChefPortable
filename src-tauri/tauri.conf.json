@@ -4,7 +4,6 @@
   "version": "0.1.0",
   "identifier": "com.gchq.cyberchef.portable",
   "build": {
-    "beforeBuildCommand": "node scripts/download-cyberchef.js",
     "frontendDist": "../cyberchef-dist",
     "devUrl": "http://localhost:1420"
   },
