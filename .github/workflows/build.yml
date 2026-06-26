@@ -95,6 +95,19 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/download-cyberchef.js
 
+      - name: 验证 frontendDist
+        shell: bash
+        run: |
+          echo "=== cyberchef-dist 内容 ==="
+          ls -la cyberchef-dist/ | head -20
+          echo ""
+          if [ -f cyberchef-dist/index.html ]; then
+            echo "✓ index.html 存在"
+          else
+            echo "✗ index.html 不存在——查找:"
+            find cyberchef-dist -name "index.html" -maxdepth 2 || echo "(未找到)"
+          fi
+
       - name: 注入版本号
         shell: bash
         run: |
@@ -135,6 +148,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: 获取版本号
+        id: version
+        run: |
+          LATEST=$(curl -sL https://api.github.com/repos/gchq/CyberChef/releases/latest)
+          CC_TAG=$(echo "$LATEST" | jq -r '.tag_name')
+          if [ -z "$CC_TAG" ] || [ "$CC_TAG" = "null" ]; then
+            echo "ERROR: 无法获取 CyberChef 版本"
+            exit 1
+          fi
+          CC_VER="${CC_TAG#v}"
+          echo "Version: $CC_VER"
+          echo "version=$CC_VER" >> "$GITHUB_OUTPUT"
+
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
@@ -150,18 +176,19 @@ jobs:
 
       - name: 创建 Git Tag
         run: |
+          VERSION="${{ steps.version.outputs.version }}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -f ${{ needs.check.outputs.version }}
-          git push -f origin ${{ needs.check.outputs.version }}
+          git tag -f "$VERSION"
+          git push -f origin "$VERSION"
 
       - name: 创建 Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ needs.check.outputs.version }}
-          name: CyberChef ${{ needs.check.outputs.version }} Portable
+          tag_name: ${{ steps.version.outputs.version }}
+          name: CyberChef ${{ steps.version.outputs.version }} Portable
           body: |
-            CyberChef ${{ needs.check.outputs.version }} 桌面版
+            CyberChef ${{ steps.version.outputs.version }} 桌面版
 
             基于 [gchq/CyberChef](https://github.com/gchq/CyberChef) 构建。
 
