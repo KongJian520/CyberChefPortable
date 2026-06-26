@@ -184,6 +184,30 @@ function unzip(src, dest) {
   log('解压完成');
 }
 
+/**
+ * CyberChef 的 zip 中不含 index.html，入口为 CyberChef_v{version}.html。
+ * 找到版本化 HTML 并复制为 index.html，Tauri 才能加载。
+ */
+function fixIndexHtml(distDir) {
+  const entries = fs.readdirSync(distDir);
+  const versioned = entries.find(f => /^CyberChef_v.+\.html$/.test(f));
+  if (!versioned) {
+    log('警告: 未找到 CyberChef_v*.html，可能影响 Tauri 加载');
+    return;
+  }
+  const src = path.join(distDir, versioned);
+  const dest = path.join(distDir, 'index.html');
+  // 如果 index.html 已存在且是正确文件则跳过
+  if (fs.existsSync(dest)) {
+    const existing = fs.readFileSync(dest, 'utf8').substring(0, 100);
+    const source = fs.readFileSync(src, 'utf8').substring(0, 100);
+    if (existing === source) return;
+    fs.unlinkSync(dest);
+  }
+  fs.copyFileSync(src, dest);
+  log(`index.html ← ${versioned}`);
+}
+
 async function main() {
   // 1. 获取最新 release (最多重试 3 次)
   log(`查询 ${REPO} 最新 release...`);
@@ -208,6 +232,7 @@ async function main() {
     const cachedVersion = fs.readFileSync(VERSION_FILE, 'utf8').trim();
     if (cachedVersion === tagName) {
       log(`已缓存版本 ${tagName}，跳过下载`);
+      fixIndexHtml(DIST_DIR);
       console.log(version);
       return;
     }
@@ -223,6 +248,9 @@ async function main() {
 
   // 5. 解压
   unzip(ZIP_PATH, DIST_DIR);
+
+  // 5b. CyberChef zip 不含 index.html，需从版本化 HTML 生成
+  fixIndexHtml(DIST_DIR);
 
   // 6. 清理 zip
   fs.unlinkSync(ZIP_PATH);
